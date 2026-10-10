@@ -1,0 +1,8 @@
+release/
+backups/
+__pycache__/
+*.pyc
+windows/TraySwitcher.exe
+windows/TraySwitcher.ini
+windows/*.backup-*
+.DS_Store

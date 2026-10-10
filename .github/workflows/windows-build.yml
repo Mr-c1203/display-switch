@@ -1,0 +1,28 @@
+name: Windows build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile tray app
+        shell: pwsh
+        run: |
+          $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+          & $compiler /nologo /codepage:65001 /target:winexe /r:System.Windows.Forms.dll /r:System.Drawing.dll /win32icon:windows/DisplaySwitch.ico /out:windows/TraySwitcher.exe windows/TraySwitcher.cs
+          if ($LASTEXITCODE -ne 0) { throw 'Compilation failed' }
+          if (-not (Test-Path windows/TraySwitcher.exe)) { throw 'Executable missing' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 显示器切换-Windows
+          path: |
+            windows/TraySwitcher.exe
+            windows/DisplaySwitch.ico
+            windows/TraySwitcher.cs
+            windows/Switch-MonitorInput.ps1
+            windows/install.ps1
+            windows/install.bat
