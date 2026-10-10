@@ -2,6 +2,8 @@
 
 同一台支持 DDC/CI 的外接显示器，在 Mac 与 Windows 电脑之间切换输入源。Mac 端是菜单栏应用，Windows 端是托盘应用；两个系统各自安装。两端使用相同的双显示器图标。
 
+**第一次使用请看 [图文入门教程](docs/使用教程.md)。** 图中的菜单为依据当前程序制作的操作示意图；实际外观会随系统版本和显示器配置变化。
+
 ## 使用前
 
 - 在显示器菜单中开启 DDC/CI，确认两台电脑实际连接的输入接口，并核对该显示器对应的 VCP 0x60 输入源编号。不要把示例编号当成自己的配置。
@@ -16,7 +18,7 @@
 codesign --force --deep --sign - /Applications/显示器切换.app
 ```
 
-打开应用后，顶部菜单栏双屏图标可选择目标输入源。升级本项目早期的 `MonitorSwitch.app` 时，可在本项目目录运行 `python3 install-mac.py /Applications/MonitorSwitch.app`；脚本先备份旧版并保留原设备配置，然后替换与验证。请不要同时启动两个副本。
+打开应用后，顶部菜单栏双屏图标左键快速切换，右键打开输入源菜单。升级本项目早期的 `MonitorSwitch.app` 时，可在本项目目录运行 `python3 install-mac.py /Applications/MonitorSwitch.app`；脚本先备份旧版并保留原设备配置，然后替换与验证。请不要同时启动两个副本。
 
 本地构建：`M1DDC_BIN=/path/to/m1ddc ./build-release.sh`。构建包默认只含注释示例配置；需为每台电脑单独配置。
 
