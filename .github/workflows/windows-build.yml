@@ -13,7 +13,10 @@ jobs:
         shell: pwsh
         run: |
           $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-          & $compiler /nologo /codepage:65001 /target:winexe /r:System.Windows.Forms.dll /r:System.Drawing.dll /win32icon:windows/DisplaySwitch.ico /out:windows/TraySwitcher.exe windows/TraySwitcher.cs
+          $icon = Join-Path $PWD 'windows\DisplaySwitch.ico'
+          $output = Join-Path $PWD 'windows\TraySwitcher.exe'
+          $source = Join-Path $PWD 'windows\TraySwitcher.cs'
+          & $compiler /nologo /codepage:65001 /target:winexe /r:System.Windows.Forms.dll /r:System.Drawing.dll "/win32icon:$icon" "/out:$output" "$source"
           if ($LASTEXITCODE -ne 0) { throw 'Compilation failed' }
           if (-not (Test-Path windows/TraySwitcher.exe)) { throw 'Executable missing' }
       - uses: actions/upload-artifact@v4
