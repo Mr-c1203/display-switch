@@ -6,3 +6,7 @@ windows/TraySwitcher.exe
 windows/TraySwitcher.ini
 windows/*.backup-*
 .DS_Store
+*.o
+/config.txt
+.obj/
+mac-app/config.txt

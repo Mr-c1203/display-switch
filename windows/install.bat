@@ -1,14 +1,7 @@
 @echo off
-rem ============================================================
-rem  Monitor input switcher - DOUBLE-CLICK installer (Windows)
-rem
-rem  1. Builds TraySwitcher.exe with the compiler built into
-rem     Windows (tray icon: left-click = switch, auto-start)
-rem  2. Creates a desktop shortcut with hotkey Ctrl+Alt+M
-rem
-rem  It will ask for the input code used by the OTHER computer.
-rem ============================================================
+rem 显示器切换 - 双击安装（Windows）
+rem 复制程序到 %LocalAppData%\显示器切换\app，设为开机自启并启动。
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1" %*
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1"
 echo.
 pause

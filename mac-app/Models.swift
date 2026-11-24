@@ -1,10 +1,21 @@
 import Foundation
 
-// 配置模型：一台显示器 → 若干个输入口（每口对应一台机器）
+// 配置模型：一台显示器 → 若干个输入口（每口可接一台电脑）
 
 struct InputEntry: Codable, Equatable {
-    var code: Int        // VCP 0x60 输入源编号
-    var label: String    // 机器名，如 "MacBook (USB-C)"
+    var code: Int            // VCP 0x60 输入源编号
+    var label: String        // 接口名，如 "USB-C"、"HDMI 2"
+    var computer: String?    // 用户给接在这个口上的电脑起的名字，如 "MacBook"
+    var inCycle: Bool?       // 是否参与热键循环；切换成功过的口自动加入
+
+    init(code: Int, label: String, computer: String? = nil, inCycle: Bool? = nil) {
+        self.code = code; self.label = label; self.computer = computer; self.inCycle = inCycle
+    }
+
+    var title: String {
+        if let c = computer, !c.isEmpty { return "\(label) — \(c)" }
+        return label
+    }
 }
 
 struct DisplayConfig: Codable, Equatable {
@@ -22,12 +33,13 @@ final class ConfigStore {
     static let shared = ConfigStore()
     private(set) var config = AppConfig()
 
-    private var url: URL {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    var dir: URL {
+        let d = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("显示器切换", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("config.json")
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
     }
+    private var url: URL { dir.appendingPathComponent("config.json") }
 
     func load() {
         if let data = try? Data(contentsOf: url),
@@ -60,20 +72,14 @@ final class ConfigStore {
         }
         guard !entries.isEmpty else { return }
         if let d = DDC.listDisplays().first {
-            let serial = d["alphaSerial"] as? String ?? ""
-            let vendor = (d["vendor"] as? NSNumber)?.uint32Value ?? 0
-            let model = (d["model"] as? NSNumber)?.uint32Value ?? 0
-            let mfg = d["manufacturer"] as? String ?? ""
-            let name = d["productName"] as? String ?? ""
-            let id = serial.isEmpty ? "\(vendor):\(model)" : serial
-            config.displays = [DisplayConfig(id: id, name: "\(mfg) \(name)", inputs: entries)]
+            let info = DisplayInfo(d as NSDictionary)
+            config.displays = [DisplayConfig(id: info.configID, name: info.displayName, inputs: entries)]
             save()
         }
     }
 
     func displayConfig(for info: DisplayInfo) -> DisplayConfig? {
-        let id = info.alphaSerial.isEmpty ? "\(info.vendor):\(info.model)" : info.alphaSerial
-        return config.displays.first(where: { $0.id == id })
+        config.displays.first(where: { $0.id == info.configID })
     }
 
     func upsert(_ dc: DisplayConfig) {
@@ -86,19 +92,57 @@ final class ConfigStore {
     }
 }
 
-// 标准 VCP 0x60 常用码 → 猜名（各家不完全一致，自动探测后用作用户可改的默认名）
-func guessInputName(_ code: Int) -> String {
+// MARK: - 接口目录
+
+/// VCP 0x60 输入源编号 → 接口类型名。
+/// 标准值来自 VESA MCCS；另收录几家厂商的非标准编号（如 AOC 的 USB-C 用 21）。
+/// 识别不出的编号显示为「输入 N」，用户可改名。
+func guessInputName(_ code: Int, manufacturer: String = "") -> String {
+    let m = manufacturer.uppercased()
+    if m == "AOC" {
+        switch code {
+        case 21: return "USB-C"
+        case 22: return "USB-C 2"
+        default: break
+        }
+    }
+    if m == "GSM" { // LG
+        switch code {
+        case 0x90: return "HDMI 1"
+        case 0x91: return "HDMI 2"
+        case 0x92: return "HDMI 3"
+        case 0xD0: return "DisplayPort"
+        case 0xD1: return "USB-C"
+        default: break
+        }
+    }
     switch code {
-    case 1: return "VGA"
-    case 3, 4: return "DVI-\(code - 2)"
+    case 1: return "VGA 1"
+    case 2: return "VGA 2"
+    case 3: return "DVI 1"
+    case 4: return "DVI 2"
     case 15: return "DisplayPort 1"
     case 16: return "DisplayPort 2"
     case 17: return "HDMI 1"
     case 18: return "HDMI 2"
     case 19: return "HDMI 3"
     case 20: return "HDMI 4"
+    case 21: return "USB-C"
+    case 22: return "USB-C 2"
     case 27: return "USB-C"
-    case 33, 34, 35: return "USB-C\(code - 32)"
+    case 28: return "USB-C 2"
     default: return "输入 \(code)"
     }
+}
+
+/// 识别接口时尝试的编号：MCCS 标准范围 + 常见厂商扩展。
+let probeCandidates: [Int] = Array(1...32) + [0x90, 0x91, 0x92, 0xD0, 0xD1]
+
+/// 接口类型排序：USB-C → HDMI → DP → 其他。
+func portSortKey(_ label: String) -> Int {
+    let l = label.uppercased()
+    if l.contains("USB-C") || l.contains("TYPE-C") { return 0 }
+    if l.contains("HDMI") { return 1 }
+    if l.contains("DISPLAYPORT") || l.contains("DP") { return 2 }
+    return 3
 }
